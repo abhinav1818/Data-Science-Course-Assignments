@@ -1,0 +1,8 @@
+Chi-Square Test for Independence Results
+Chi2 Statistic: 5.6382
+Degrees of Freedom: 4
+P-Value: 0.2278
+Critical Value (alpha=0.05): 9.4877
+
+Fail to reject the null hypothesis.
+No significant association between device type and customer satisfaction.
