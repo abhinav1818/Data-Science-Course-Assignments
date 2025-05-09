@@ -129,73 +129,47 @@ def transform(df):
 
 
 import streamlit as st
-st.subheader("Upload CSV File for Prediction")
-uploaded_file = st.file_uploader("Titanic_test.py",type=["csv"])
+# Define user input UI
+st.title("Titanic Survival Prediction")
 
-if uploaded_file:
+sex = st.selectbox("Sex", ["male", "female"])
+age = st.slider("Age", 0, 100, 30)
+fare = st.slider("Fare", 0.0, 600.0, 32.2)
+sibsp = st.number_input("Number of Siblings/Spouses aboard", min_value=0, max_value=10, value=0)
+parch = st.number_input("Number of Parents/Children aboard", min_value=0, max_value=10, value=0)
+pclass = st.selectbox("Passenger Class", [1, 2, 3])
+embarked = st.selectbox("Port of Embarkation", ["S", "C", "Q"])
+
+# When user clicks "Predict"
+if st.button("Predict Survival"):
+
+    # Create a DataFrame from inputs
+    input_data = pd.DataFrame({
+        "Pclass": [pclass],
+        "Sex": [LE.transform([sex])[0]],
+        "Age": SS.transform([[age]])[0],
+        "SibSp": [np.log(sibsp + 1)],
+        "Parch": [np.log(parch + 1)],
+        "Fare": np.log1p([fare]),
+        "Embarked_Q": [1 if embarked == "Q" else 0],
+        "Embarked_S": [1 if embarked == "S" else 0]
+    })
+
+    # Ensure all expected features are present (matching training data)
+    expected_columns = ['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked_Q', 'Embarked_S']
+    for col in expected_columns:
+        if col not in input_data.columns:
+            input_data[col] = 0  # Add any missing columns with 0
+
+    input_data = input_data[expected_columns]  # Reorder columns
+
+    # Predict
     try:
-        
-        user_df = pd.read_csv(uploaded_file,on_bad_lines='skip')
-        st.write("File uploaded successfully!")
-        # Check if user_df is None or not
-        if user_df is None:
-            st.error("The uploaded DataFrame is None.")
-            st.stop()
+        prediction = model.predict(input_data)[0]
+        probability = model.predict_proba(input_data)[0][1]
 
-        st.write("First few rows of uploaded data:", user_df.head())
-        original = user_df.copy()
-        
-        # Check for target column
-        has_target = 'Survived' in user_df.columns
-    
-        # Preprocess user data
-        user_df = preprocess(user_df)
-        user_df = transform(user_df)
-        
-    
-        # Align columns after preprocessing
-        missing_cols = set(X.columns) - set(user_df.columns)
-        for col in missing_cols:
-            user_df[col] = 0  # add missing columns with default value
-        user_df = user_df[X.columns]  # reorder to match training
-    
-        if has_target:
-            X_user = user_df.drop("Survived", axis=1)
-            y_user = original['Survived']
-            y_pred = model.predict(X_user)
-            y_prob = model.predict_proba(X_user)[:, 1]
-    
-            # Evaluation metrics
-            st.write("**Uploaded Data Evaluation:**")
-            st.write("Accuracy:", accuracy_score(y_user, y_pred))
-            st.write("Precision:", precision_score(y_user, y_pred))
-            st.write("Recall:", recall_score(y_user, y_pred))
-            st.write("F1 Score:", f1_score(y_user, y_pred))
-            st.write("ROC AUC Score:", roc_auc_score(y_user, y_prob))
-    
-            # ROC Curve
-            fpr, tpr, _ = roc_curve(y_user, y_prob)
-            fig, ax = plt.subplots()
-            ax.plot(fpr, tpr, label='ROC Curve')
-            ax.plot([0, 1], [0, 1], 'k--')
-            ax.set_xlabel("False Positive Rate")
-            ax.set_ylabel("True Positive Rate")
-            ax.set_title("ROC Curve (Uploaded File)")
-            ax.legend()
-            st.pyplot(fig)
-        else:
-            # Predict for unlabeled data
-            y_pred = model.predict(user_df)
-            y_prob = model.predict_proba(user_df)[:, 1]
-            result_df = original.copy()
-            result_df['Prediction'] = y_pred
-            result_df['Survival Probability'] = y_prob
-            st.write("### Prediction Results")
-            st.dataframe(result_df)
-            csv = result_df.to_csv(index=False).encode('utf-8')
-            st.download_button("Download Results", data=csv, file_name="predictions.csv", mime='text/csv')
+        st.subheader("Prediction Result")
+        st.write("Survived" if prediction == 1 else "Did Not Survive")
+        st.write(f"Survival Probability: {probability:.2f}")
     except Exception as e:
-        st.error(f"Error reading file: {e}")
-        st.stop()
-else:
-    st.warning("Please upload a CSV file to proceed.")
+        st.error(f"Prediction failed: {e}")
