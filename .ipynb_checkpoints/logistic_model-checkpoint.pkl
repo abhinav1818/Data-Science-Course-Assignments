@@ -1,9 +1,6 @@
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 
-
-
-
 # Split data
 X = df.drop('Survived', axis=1)
 y = df['Survived']
